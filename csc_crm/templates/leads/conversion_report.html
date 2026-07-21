@@ -1,0 +1,208 @@
+{% extends 'leads/base.html' %}
+{% load static %}
+
+{% block title %}Conversion Report — CSC CRM{% endblock %}
+
+{% block content %}
+
+
+<!-- ── Page Header ── -->
+<div class="cr-header">
+  <div class="cr-header-left">
+    <h2>Lead Conversion Report</h2>
+    <p>Track lead performance and conversion insights</p>
+  </div>
+  <div class="cr-header-right">
+
+    <div class="cr-date-range-wrap">
+      <div class="cr-date-range" id="crDateToggle">
+        <i class="fa-regular fa-calendar"></i>
+        <span id="crDateLabel">{{ range_label|default:"01 May 2026 – 31 May 2026" }}</span>
+        <i class="fa-solid fa-chevron-down"></i>
+      </div>
+
+      <div class="cr-date-dropdown" id="crDateDropdown">
+        <div class="cr-date-opt" data-range="this_month">
+          <span>This Month</span><i class="fa-solid fa-check"></i>
+        </div>
+        <div class="cr-date-opt" data-range="last_month">
+          <span>Last Month</span><i class="fa-solid fa-check"></i>
+        </div>
+        <div class="cr-date-opt" data-range="last_3_months">
+          <span>Last 3 Months</span><i class="fa-solid fa-check"></i>
+        </div>
+        <div class="cr-date-opt" data-range="last_6_months">
+          <span>Last 6 Months</span><i class="fa-solid fa-check"></i>
+        </div>
+        <div class="cr-date-opt" data-range="this_year">
+          <span>This Year</span><i class="fa-solid fa-check"></i>
+        </div>
+        <div class="cr-date-opt" data-range="all_time">
+          <span>All Time</span><i class="fa-solid fa-check"></i>
+        </div>
+
+        <div class="cr-date-divider"></div>
+
+        <div class="cr-custom-range">
+          <label>Custom Range</label>
+          <input type="date" id="crStartDate">
+          <input type="date" id="crEndDate">
+          <button class="cr-custom-apply" id="crApplyCustom">Apply</button>
+        </div>
+      </div>
+    </div>
+
+    <a href="{% url 'leads:export_leads_csv' %}{% if request.GET.start %}?start={{ request.GET.start }}&end={{ request.GET.end }}{% endif %}" class="cr-export-btn">
+      <i class="fa-solid fa-download"></i> Export Report
+    </a>
+  </div>
+</div>
+
+<!-- ── Stat Cards ── -->
+<div class="cr-cards">
+
+  <!-- Total Leads -->
+  <div class="cr-card cr-card--total">
+    <div class="cr-card-top">
+      <div class="cr-card-icon"><i class="fa-solid fa-users"></i></div>
+      <div>
+        <div class="cr-card-label">Total Leads</div>
+      </div>
+    </div>
+    <div class="cr-card-value">{{ total_leads }}</div>
+    <div class="cr-card-sub"><span>100%</span> of all leads</div>
+    <div class="cr-card-sparkline">
+      <canvas id="sparkTotal" width="80" height="36"></canvas>
+    </div>
+  </div>
+
+  <!-- Enrolled -->
+  <div class="cr-card cr-card--enroll">
+    <div class="cr-card-top">
+      <div class="cr-card-icon"><i class="fa-solid fa-circle-check"></i></div>
+      <div>
+        <div class="cr-card-label">Enrolled</div>
+      </div>
+    </div>
+    <div class="cr-card-value" style="color:#22c55e">{{ enrolled_leads }}</div>
+    <div class="cr-card-sub">
+      <span>{% if total_leads %}{{ enrolled_leads|floatformat:0 }}{% else %}0{% endif %}%</span> of total
+    </div>
+    <div class="cr-card-sparkline">
+      <canvas id="sparkEnroll" width="80" height="36"></canvas>
+    </div>
+  </div>
+
+  <!-- Lost -->
+  <div class="cr-card cr-card--lost">
+    <div class="cr-card-top">
+      <div class="cr-card-icon"><i class="fa-solid fa-circle-xmark"></i></div>
+      <div>
+        <div class="cr-card-label">Lost</div>
+      </div>
+    </div>
+    <div class="cr-card-value" style="color:#ef4444">{{ lost_leads }}</div>
+    <div class="cr-card-sub">
+      <span>{{ lost_leads }}</span> leads not converted
+    </div>
+    <div class="cr-card-sparkline">
+      <canvas id="sparkLost" width="80" height="36"></canvas>
+    </div>
+  </div>
+
+  <!-- Conversion Rate -->
+  <div class="cr-card cr-card--rate">
+    <div class="cr-card-top">
+      <div class="cr-card-icon"><i class="fa-solid fa-chart-line"></i></div>
+      <div>
+        <div class="cr-card-label">Conversion Rate</div>
+      </div>
+    </div>
+    <div class="cr-card-value" style="color:#0ea5e9">{{ conversion_rate|floatformat:2 }}%</div>
+    <div class="cr-card-sub">Enrolled vs total leads</div>
+    <div class="cr-card-sparkline">
+      <canvas id="sparkRate" width="80" height="36"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Charts Row ── -->
+<div class="cr-charts">
+
+  <!-- Bar Chart -->
+  <div class="cr-chart-card">
+    <div class="cr-chart-header">
+      <div class="cr-chart-title">
+        <i class="fa-solid fa-chart-bar"></i>
+        <div>
+          <h3>Lead Stage Analysis</h3>
+          <p>Number of leads in each stage</p>
+        </div>
+      </div>
+      <div class="cr-by-count">By Count ▾</div>
+    </div>
+    <canvas id="leadStageChart" height="180"></canvas>
+  </div>
+
+  <!-- Donut Chart -->
+  <div class="cr-chart-card">
+    <div class="cr-chart-header">
+      <div class="cr-chart-title">
+        <i class="fa-solid fa-circle-dot"></i>
+        <div>
+          <h3>Lead Status Distribution</h3>
+          <p>Percentage distribution of leads by status</p>
+        </div>
+      </div>
+    </div>
+    <div class="cr-donut-wrap">
+      <div class="cr-donut-canvas">
+        <canvas id="statusChart" width="180" height="180"></canvas>
+      </div>
+      <div class="cr-donut-legend" id="donutLegend"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Source Performance Table ── -->
+<div class="cr-table-card">
+  <div class="cr-table-header">
+    <div class="cr-table-title">
+      <i class="fa-solid fa-table"></i>
+      <div>
+        <h3>Lead Source Performance</h3>
+        <p>Performance overview by lead source</p>
+      </div>
+    </div>
+    <div class="cr-show-select">
+      Show
+      <select id="crShowRows" onchange="renderTable()">
+        <option value="10" selected>10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+      </select>
+    </div>
+  </div>
+
+  <table class="cr-table">
+    <thead>
+      <tr>
+        <th>Source</th>
+        <th>Total Leads</th>
+        <th>Enrolled</th>
+        <th>Conversion Rate</th>
+        <th>Trend</th>
+      </tr>
+    </thead>
+    <tbody id="crTableBody"></tbody>
+  </table>
+
+  <div class="cr-pagination" id="crPagination"></div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{% endblock %}
