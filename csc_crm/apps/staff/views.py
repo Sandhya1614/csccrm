@@ -1375,7 +1375,6 @@ def staff_dashboard(request):
     }
     return render( request, 'staff/dashboard.html', context)
 
-
 # ================================ MY PROFILE ================================
 
 def staff_profile(request, staff_id):
@@ -1420,6 +1419,81 @@ def staff_profile(request, staff_id):
     # Documents uploaded for this staff
     documents = StaffDocument.objects.filter(staff=staff)
 
+    # ── RECENT ACTIVITY FEED ──────────────────────────────────────────
+    from datetime import datetime as _dt
+    activity_feed = []
+
+    # 1) Check-ins: Attendance records where status is Present/Late and log_in exists
+    checkins = Attendance.objects.filter(
+        staff=staff,
+        status__in=['Present', 'Late'],
+        log_in__isnull=False
+    ).order_by('-log_in')[:10]
+    for att in checkins:
+        activity_feed.append({
+            'type': 'checkin',
+            'icon': 'fa-right-to-bracket',
+            'color': 'green',
+            'title': 'Checked In' if att.status == 'Present' else 'Checked In (Late)',
+            'detail': att.log_in.strftime('%d %b %Y, %I:%M %p'),
+            'timestamp': att.log_in,
+        })
+
+    # 2) Document uploads: each StaffDocument with filename as designation
+    for doc in documents.order_by('-uploaded_at')[:10]:
+        raw_name = doc.document.name.split('/')[-1] if doc.document else 'Document'
+        # Strip extension for label
+        doc_label = raw_name.rsplit('.', 1)[0].replace('_', ' ').title()
+        activity_feed.append({
+            'type': 'document',
+            'icon': 'fa-file-arrow-up',
+            'color': 'blue',
+            'title': f'Uploaded {doc_label}',
+            'detail': doc.uploaded_at.strftime('%d %b %Y, %I:%M %p'),
+            'timestamp': doc.uploaded_at,
+        })
+
+    # 3) Profile updates: staff updated_at (if different from created_at)
+    if staff.updated_at and abs((staff.updated_at - staff.created_at).total_seconds()) > 60:
+        activity_feed.append({
+            'type': 'profile',
+            'icon': 'fa-user-pen',
+            'color': 'yellow',
+            'title': 'Profile Updated',
+            'detail': staff.updated_at.strftime('%d %b %Y, %I:%M %p'),
+            'timestamp': staff.updated_at,
+        })
+
+    # # 4) Profile created
+    # activity_feed.append({
+    #     'type': 'created',
+    #     'icon': 'fa-user-plus',
+    #     'color': 'purple',
+    #     'title': 'Profile Created',
+    #     'detail': staff.created_at.strftime('%d %b %Y, %I:%M %p'),
+    #     'timestamp': staff.created_at,
+    # })
+
+    # Sort all by timestamp descending, keep latest 10
+    activity_feed.sort(key=lambda x: x['timestamp'], reverse=True)
+    activity_feed = activity_feed[:10]
+
+    # Humanize timestamps
+    _now = timezone.now()
+    for item in activity_feed:
+        diff = _now - item['timestamp']
+        if diff.days == 0:
+            item['when'] = 'Today'
+        elif diff.days == 1:
+            item['when'] = 'Yesterday'
+        elif diff.days < 7:
+            item['when'] = f"{diff.days} Days Ago"
+        elif diff.days < 30:
+            item['when'] = f"{diff.days // 7} Week{'s' if diff.days // 7 > 1 else ''} Ago"
+        else:
+            item['when'] = item['timestamp'].strftime('%d %b %Y')
+    # ─────────────────────────────────────────────────────────────────
+
     # Default skills by department
     dept = staff.department.dept_name if staff.department else ''
     dept_skills_map = {
@@ -1462,5 +1536,6 @@ def staff_profile(request, staff_id):
         'tasks_total': tasks_total,
         'documents': documents,
         'skills': skills,
+        'activity_feed': activity_feed,
     }
     return render(request, 'staff/staff_profile.html', context)

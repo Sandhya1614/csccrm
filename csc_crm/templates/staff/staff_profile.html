@@ -127,7 +127,7 @@
     <div class="sp-row"><span class="sp-row-k">Department</span><span class="sp-row-v">{{ staff.department }}</span></div>
     <div class="sp-row"><span class="sp-row-k">Role</span><span class="sp-row-v">{{ staff.role }}</span></div>
     <div class="sp-row"><span class="sp-row-k">Reporting Manager</span><span class="sp-row-v">{{ staff.reporting_manager|default:"N/A" }}</span></div>
-    <div class="sp-row"><span class="sp-row-k">Shift</span><span class="sp-row-v">{{ staff.shift|default:"General Shift" }}</span></div>
+    {% comment %} <div class="sp-row"><span class="sp-row-k">Shift</span><span class="sp-row-v">{{ staff.shift|default:"General Shift" }}</span></div> {% endcomment %}
     <div class="sp-row"><span class="sp-row-k">Date of Joining</span><span class="sp-row-v">{{ staff.date_of_joining|date:"d M Y" }}</span></div>
   </div>
 
@@ -180,41 +180,21 @@
   <div class="sp-section">
     <div class="sp-sec-head">
       <i class="fa fa-clock-rotate-left"></i> Recent Activity
-      <a href="#" class="sp-view-all-link">View All Activity</a>
+      {% comment %} <a href="#" class="sp-view-all-link">View All Activity</a> {% endcomment %}
     </div>
     <div class="sp-activity-list">
-      <div class="sp-activity-item sp-act-green">
-        <div class="sp-act-icon"><i class="fa fa-right-to-bracket"></i></div>
+      {% for item in activity_feed %}
+      <div class="sp-activity-item sp-act-{{ item.color }}">
+        <div class="sp-act-icon"><i class="fa {{ item.icon }}"></i></div>
         <div class="sp-act-body">
-          <div class="sp-act-title">Checked In</div>
-          <div class="sp-act-sub">{{ staff.date_of_joining|date:"d M Y" }}, 09:10 AM</div>
+          <div class="sp-act-title">{{ item.title }}</div>
+          <div class="sp-act-sub">{{ item.detail }}</div>
         </div>
-        <div class="sp-act-when">Today</div>
+        <div class="sp-act-when">{{ item.when }}</div>
       </div>
-      <div class="sp-activity-item sp-act-blue">
-        <div class="sp-act-icon"><i class="fa fa-file-arrow-up"></i></div>
-        <div class="sp-act-body">
-          <div class="sp-act-title">Uploaded Resume</div>
-          <div class="sp-act-sub">{{ staff.date_of_joining|date:"d M Y" }}, 09:05 AM</div>
-        </div>
-        <div class="sp-act-when">Today</div>
-      </div>
-      <div class="sp-activity-item sp-act-yellow">
-        <div class="sp-act-icon"><i class="fa fa-phone"></i></div>
-        <div class="sp-act-body">
-          <div class="sp-act-title">Updated Phone Number</div>
-          <div class="sp-act-sub">{{ staff.date_of_joining|date:"d M Y" }}, 04:30 PM</div>
-        </div>
-        <div class="sp-act-when">Yesterday</div>
-      </div>
-      <div class="sp-activity-item sp-act-purple">
-        <div class="sp-act-icon"><i class="fa fa-user-plus"></i></div>
-        <div class="sp-act-body">
-          <div class="sp-act-title">Profile Created</div>
-          <div class="sp-act-sub">{{ staff.date_of_joining|date:"d M Y" }}, 11:20 AM</div>
-        </div>
-        <div class="sp-act-when">2 Days Ago</div>
-      </div>
+      {% empty %}
+      <div class="sp-empty"><i class="fa fa-clock" style="margin-right:6px;color:#d1d5db;"></i>No recent activity found.</div>
+      {% endfor %}
     </div>
   </div>
 

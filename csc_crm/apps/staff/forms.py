@@ -2,6 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from .models import *
 from datetime import date
+import re
 
 class StaffForm(forms.ModelForm):
     """Form Adding/Editing Staff members"""
@@ -430,12 +431,18 @@ class staffProfileForm(forms.ModelForm):
             'skills': forms.Textarea(attrs={'class': 'mp-input', 'rows': 4, 'placeholder': 'Python:90, Django:85, JavaScript:75', 'id': 'mpSkillsInput'}),
         }
 
-    def clean_phone(self):
-        phone = self.cleaned_data.get('phone', '')
-        if phone and (not phone.isdigit() or len(phone) != 10):
-            raise forms.ValidationError('Phone must be exactly 10 digits.')
-        return phone
+    # def clean_phone(self):
+    #     phone = self.cleaned_data.get('phone', '')
+    #     if phone and (not phone.isdigit() or len(phone) != 13):
+    #         raise forms.ValidationError('Phone must be exactly 13 digits.')
+    #     return phone
 
+def clean_phone(self):
+    phone = self.cleaned_data.get('phone', '')
+    if phone:
+        if not re.match(r'^\+\d{12}$', phone):
+            raise forms.ValidationError('Phone number must start with + followed by 12 digits.')
+    return phone
     def clean_email(self):
         email = self.cleaned_data.get('email')
         if self.instance.pk and email:
