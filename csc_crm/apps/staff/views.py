@@ -1464,15 +1464,6 @@ def staff_profile(request, staff_id):
             'timestamp': staff.updated_at,
         })
 
-    # # 4) Profile created
-    # activity_feed.append({
-    #     'type': 'created',
-    #     'icon': 'fa-user-plus',
-    #     'color': 'purple',
-    #     'title': 'Profile Created',
-    #     'detail': staff.created_at.strftime('%d %b %Y, %I:%M %p'),
-    #     'timestamp': staff.created_at,
-    # })
 
     # Sort all by timestamp descending, keep latest 10
     activity_feed.sort(key=lambda x: x['timestamp'], reverse=True)
@@ -1493,39 +1484,6 @@ def staff_profile(request, staff_id):
         else:
             item['when'] = item['timestamp'].strftime('%d %b %Y')
     # ─────────────────────────────────────────────────────────────────
-
-    # Default skills by department
-    dept = staff.department.dept_name if staff.department else ''
-    dept_skills_map = {
-        'sales':      [{'name': 'Communication', 'percent': 90}, {'name': 'CRM Tools', 'percent': 80}, {'name': 'Negotiation', 'percent': 85}, {'name': 'Lead Handling', 'percent': 88}],
-        'telecall':   [{'name': 'Cold Calling', 'percent': 88}, {'name': 'Communication', 'percent': 90}, {'name': 'Follow-up', 'percent': 82}, {'name': 'Data Entry', 'percent': 75}],
-        'hr':         [{'name': 'Recruitment', 'percent': 85}, {'name': 'Payroll', 'percent': 78}, {'name': 'Communication', 'percent': 90}, {'name': 'MS Office', 'percent': 80}],
-        'trainers':   [{'name': 'Teaching', 'percent': 92}, {'name': 'Curriculum Design', 'percent': 80}, {'name': 'Communication', 'percent': 88}, {'name': 'Assessment', 'percent': 75}],
-        'support':    [{'name': 'Problem Solving', 'percent': 85}, {'name': 'Communication', 'percent': 88}, {'name': 'Ticketing Tools', 'percent': 78}, {'name': 'Documentation', 'percent': 72}],
-        'management': [{'name': 'Leadership', 'percent': 92}, {'name': 'Strategy', 'percent': 88}, {'name': 'Analytics', 'percent': 80}, {'name': 'Communication', 'percent': 90}],
-    }
-    default_skills = dept_skills_map.get(dept, [
-        {'name': 'Communication', 'percent': 85},
-        {'name': 'MS Office', 'percent': 80},
-        {'name': 'Teamwork', 'percent': 88},
-        {'name': 'Problem Solving', 'percent': 78},
-    ])
-
-    # Parse staff skills from model (JSON), fall back to dept defaults
-    import json as _json
-    skills = default_skills
-    if staff.skills:
-        try:
-            parsed = _json.loads(staff.skills)
-            if parsed:
-                # normalise key: support both 'level' and 'percent'
-                for s in parsed:
-                    if 'level' in s and 'percent' not in s:
-                        s['percent'] = s['level']
-                skills = parsed
-        except Exception:
-            pass
-
     context = {
         'staff': staff,
         'form': form,
@@ -1535,7 +1493,6 @@ def staff_profile(request, staff_id):
         'tasks_completed': tasks_completed,
         'tasks_total': tasks_total,
         'documents': documents,
-        'skills': skills,
         'activity_feed': activity_feed,
     }
     return render(request, 'staff/staff_profile.html', context)
