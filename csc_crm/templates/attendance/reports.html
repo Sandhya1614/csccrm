@@ -197,76 +197,63 @@
             </div>
 
         </div>
+<div class="charts-row">
 
-        <div class="row g-4 mb-4">
+    <!-- ATTENDANCE DISTRIBUTION DONUT -->
+    <div class="chart-card">
 
-            <!-- ATTENDANCE DISTRIBUTION DONUT -->
+        <div class="chart-header">
+            <h4>
+                Attendance Distribution
+            </h4>
+        </div>
 
-            <div class="col-lg-6">
+        <div class="pie-chart-container">
+            <canvas id="distributionChart"></canvas>
+        </div>
 
-                <div class="chart-card">
+    </div>
 
-                    <div class="chart-header">
+    <!-- BATCH-WISE ATTENDANCE (dropdown selector) -->
+    <div class="chart-card">
 
-                        <h4>
-                            Attendance Distribution
-                        </h4>
-                    </div>
+        <div class="chart-header">
 
-                    <div class="pie-chart-container">
-                        <canvas id="distributionChart"></canvas>
-                    </div>
+            <h4>
+                Batch-wise Attendance
+            </h4>
 
-                </div>
+            <select id="batchWiseSelector" class="filter-input" style="max-width:220px;">
+                <option value="">All Batches</option>
+            </select>
 
-            </div>
-
-            <!-- BATCH-WISE ATTENDANCE (dropdown selector) -->
-
-            <div class="col-lg-6">
-
-                <div class="chart-card">
-
-                    <div class="chart-header">
-
-                        <h4>
-                            Batch-wise Attendance
-                        </h4>
-
-                        <select id="batchWiseSelector" class="filter-input" style="max-width:220px;">
-                            <option value="">All Batches</option>
-                        </select>
-
-                        <div class="text-muted">
-                            Attendance Updated On : {{ attendance_date }}
-                        </div>
-
-                    </div>
-
-                    {% if show_batch_chart %}
-
-                    <div class="pie-chart-container">
-                        <canvas id="batchChart"></canvas>
-                    </div>
-
-                    {% else %}
-
-                    <div class="chart-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-
-                        <h5>Attendance Not Available</h5>
-
-                        <p>{{ warning_message }}</p>
-                    </div>
-
-                    {% endif %}
-
-                </div>
-
+            <div class="text-muted">
+                Attendance Updated On : {{ attendance_date }}
             </div>
 
         </div>
 
+        {% if show_batch_chart %}
+
+        <div class="pie-chart-container">
+            <canvas id="batchChart"></canvas>
+        </div>
+
+        {% else %}
+
+        <div class="chart-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+
+            <h5>Attendance Not Available</h5>
+
+            <p>{{ warning_message }}</p>
+        </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
 
 
         <!-- REPORT TABLE -->
