@@ -1811,14 +1811,23 @@ def reports(request):
     status_filter = request.GET.get(
         "status"
     )
-    
+
+    date_from_filter = request.GET.get(
+        "date_from"
+    )
+
+    date_to_filter = request.GET.get(
+        "date_to"
+    )
+
+    distribution_percentage_filter = request.GET.get(
+        "distribution_percentage"
+    )
+
     batch_chart_title = "Batch-wise Attendance"
     
     if batch_filter:
-       # batch_chart_title = (
-          #  f"Batch-wise Attendance - "
-          #  f"{batch_filter.title()}"
-       # )
+       
        selected_batch_obj = Batch.objects.filter(
            id = batch_filter
        ).first()
@@ -1916,18 +1925,29 @@ def reports(request):
 
         for enrollment in enrollments:
 
-            present_count = Attendance.objects.filter(
-                enrollment=enrollment,
+            enrollment_attendance_qs = Attendance.objects.filter(
+                enrollment=enrollment
+            )
+
+            if date_from_filter:
+                enrollment_attendance_qs = enrollment_attendance_qs.filter(
+                    attendance_date__gte=date_from_filter
+                )
+
+            if date_to_filter:
+                enrollment_attendance_qs = enrollment_attendance_qs.filter(
+                    attendance_date__lte=date_to_filter
+                )
+
+            present_count = enrollment_attendance_qs.filter(
                 status='Present'
             ).count()
 
-            absent_count = Attendance.objects.filter(
-                enrollment=enrollment,
+            absent_count = enrollment_attendance_qs.filter(
                 status='Absent'
             ).count()
 
-            late_count = Attendance.objects.filter(
-                enrollment=enrollment,
+            late_count = enrollment_attendance_qs.filter(
                 status='Late'
             ).count()
 
@@ -1990,18 +2010,29 @@ def reports(request):
 
     for enrollment in enrollments:
 
-        present_count = Attendance.objects.filter(
-            enrollment=enrollment,
+        enrollment_attendance_qs = Attendance.objects.filter(
+            enrollment=enrollment
+        )
+
+        if date_from_filter:
+            enrollment_attendance_qs = enrollment_attendance_qs.filter(
+                attendance_date__gte=date_from_filter
+            )
+
+        if date_to_filter:
+            enrollment_attendance_qs = enrollment_attendance_qs.filter(
+                attendance_date__lte=date_to_filter
+            )
+
+        present_count = enrollment_attendance_qs.filter(
             status='Present'
         ).count()
 
-        absent_count = Attendance.objects.filter(
-            enrollment=enrollment,
+        absent_count = enrollment_attendance_qs.filter(
             status='Absent'
         ).count()
 
-        late_count = Attendance.objects.filter(
-            enrollment=enrollment,
+        late_count = enrollment_attendance_qs.filter(
             status='Late'
         ).count()
 
@@ -2039,6 +2070,9 @@ def reports(request):
             status = "Critical"
 
         report_students.append({
+
+            "enrollment_id":
+            enrollment.id,
 
             "student":
             enrollment.admission.student,
@@ -2078,6 +2112,7 @@ def reports(request):
     monthly_present = [0] * 12
     monthly_absent = [0] * 12
     monthly_late = [0] * 12
+    monthly_incomplete = [0] * 12
     
     
     
@@ -2117,6 +2152,16 @@ def reports(request):
             enrollment__batch_id=batch_filter
         )
 
+    if date_from_filter:
+        attendance_qs = attendance_qs.filter(
+            attendance_date__gte=date_from_filter
+        )
+
+    if date_to_filter:
+        attendance_qs = attendance_qs.filter(
+            attendance_date__lte=date_to_filter
+        )
+
     for month in range(1, 13):
 
         monthly_present[month - 1] = attendance_qs.filter(
@@ -2136,6 +2181,24 @@ def reports(request):
             attendance_date__year=today.year,
             status="Late"
         ).count()
+
+        month_marked_days = attendance_qs.filter(
+            attendance_date__month=month,
+            attendance_date__year=today.year
+        ).values("attendance_date").distinct().count()
+
+        month_expected = (
+            enrollments.count() * month_marked_days
+        )
+
+        monthly_incomplete[month - 1] = max(
+            month_expected - (
+                monthly_present[month - 1] +
+                monthly_absent[month - 1] +
+                monthly_late[month - 1]
+            ),
+            0
+        )
 
     # Course Analytics
 
@@ -2337,6 +2400,143 @@ def reports(request):
         "not_started" if not marked else "done"
         )
 
+    # Attendance Distribution (Present / Absent / Late / Incomplete)
+    # This section is only affected by distribution_percentage_filter,
+    # in addition to the base filters already applied to report_students.
+
+    # Defaults to present-day (today) attendance; if the user sets a
+    # date range filter, that range is used instead.
+
+    distribution_date_from = date_from_filter or today
+    distribution_date_to = date_to_filter or today
+
+    qualifying_enrollment_ids = None
+
+    if distribution_percentage_filter:
+        try:
+            min_percentage = float(distribution_percentage_filter)
+            qualifying_enrollment_ids = [
+                s["enrollment_id"] for s in report_students
+                if s["attendance_rate"] >= min_percentage
+            ]
+        except ValueError:
+            qualifying_enrollment_ids = None
+
+    distribution_enrollments = enrollments
+
+    if qualifying_enrollment_ids is not None:
+        distribution_enrollments = enrollments.filter(
+            id__in=qualifying_enrollment_ids
+        )
+
+    distribution_attendance_qs = Attendance.objects.filter(
+        enrollment__in=distribution_enrollments,
+        attendance_date__gte=distribution_date_from,
+        attendance_date__lte=distribution_date_to
+    )
+
+    distribution_present = distribution_attendance_qs.filter(
+        status='Present'
+    ).count()
+
+    distribution_absent = distribution_attendance_qs.filter(
+        status='Absent'
+    ).count()
+
+    distribution_late = distribution_attendance_qs.filter(
+        status='Late'
+    ).count()
+
+    distribution_days_count = distribution_attendance_qs.values(
+        'attendance_date'
+    ).distinct().count() or 1
+
+    distribution_expected_days = (
+        distribution_enrollments.count() * distribution_days_count
+    )
+
+    distribution_incomplete = max(
+        distribution_expected_days - (
+            distribution_present +
+            distribution_absent +
+            distribution_late
+        ),
+        0
+    )
+
+    distribution_total = (
+        distribution_present +
+        distribution_absent +
+        distribution_late +
+        distribution_incomplete
+    )
+
+    def _pct(part):
+        return round((part / distribution_total) * 100, 1) if distribution_total else 0
+
+    distribution_data = {
+        "present": distribution_present,
+        "absent": distribution_absent,
+        "late": distribution_late,
+        "incomplete": distribution_incomplete,
+        "present_pct": _pct(distribution_present),
+        "absent_pct": _pct(distribution_absent),
+        "late_pct": _pct(distribution_late),
+        "incomplete_pct": _pct(distribution_incomplete),
+    }
+
+    # Batch-wise Attendance (independent dropdown selector)
+    # Unfiltered by course/batch selection so every batch is selectable;
+    # respects the date range filter.
+
+    all_batches_qs = Batch.objects.all()
+
+    all_batch_labels = []
+    all_batch_present_list = []
+    all_batch_absent_list = []
+    all_batch_late_list = []
+    all_batch_percentage_list = []
+    all_batch_ids = []
+
+    for batch in all_batches_qs:
+
+        batch_attendance_qs = Attendance.objects.filter(
+            batch=batch
+        )
+
+        if date_from_filter:
+            batch_attendance_qs = batch_attendance_qs.filter(
+                attendance_date__gte=date_from_filter
+            )
+
+        if date_to_filter:
+            batch_attendance_qs = batch_attendance_qs.filter(
+                attendance_date__lte=date_to_filter
+            )
+
+        if not date_from_filter and not date_to_filter:
+            batch_attendance_qs = batch_attendance_qs.filter(
+                attendance_date=latest_attendance_date
+            )
+
+        b_present = batch_attendance_qs.filter(status="Present").count()
+        b_absent = batch_attendance_qs.filter(status="Absent").count()
+        b_late = batch_attendance_qs.filter(status="Late").count()
+        b_total = b_present + b_absent + b_late
+
+        b_percentage = round(
+            ((b_present + b_late) / b_total) * 100, 1
+        ) if b_total else 0
+
+        all_batch_ids.append(batch.id)
+        all_batch_labels.append(
+            f"{batch.course.course_name} - {batch.batch_name}"
+        )
+        all_batch_present_list.append(b_present)
+        all_batch_absent_list.append(b_absent)
+        all_batch_late_list.append(b_late)
+        all_batch_percentage_list.append(b_percentage)
+
     context = {
 
         "total_students":
@@ -2362,6 +2562,9 @@ def reports(request):
 
         "monthly_late":
         monthly_late,
+
+        "monthly_incomplete":
+        monthly_incomplete,
 
         "course_labels":
         course_labels,
@@ -2412,9 +2615,61 @@ def reports(request):
         "show_batch_chart": show_batch_chart,
 
         "warning_message": warning_message,
-     
+
+        "date_from_filter": date_from_filter or "",
+
+        "date_to_filter": date_to_filter or "",
+
+        "distribution_percentage_filter": distribution_percentage_filter or "",
+
+        "distribution_data": distribution_data,
+
+        "all_batch_labels": all_batch_labels,
+
+        "all_batch_ids": all_batch_ids,
+
+        "all_batch_present_list": all_batch_present_list,
+
+        "all_batch_absent_list": all_batch_absent_list,
+
+        "all_batch_late_list": all_batch_late_list,
+
+        "all_batch_percentage_list": all_batch_percentage_list,
 
     }
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+
+        from django.template.loader import render_to_string
+
+        table_rows_html = render_to_string(
+            "attendance/_report_table_rows.html",
+            {"report_students": report_students},
+            request=request
+        )
+
+        filter_message_html = render_to_string(
+            "attendance/_filter_message.html",
+            {
+                "attendance_status": attendance_status,
+                "today_marked_count": today_marked_count,
+                "total_students": total_students,
+                "pending_count": pending_count,
+            },
+            request=request
+        )
+
+        return JsonResponse({
+            "monthly_present": monthly_present,
+            "monthly_absent": monthly_absent,
+            "monthly_late": monthly_late,
+            "monthly_incomplete": monthly_incomplete,
+            "monthly_chart_title": monthly_chart_title,
+            "distribution_data": distribution_data,
+            "table_rows_html": table_rows_html,
+            "record_count": len(report_students),
+            "filter_message_html": filter_message_html,
+        })
 
     return render(
         request,

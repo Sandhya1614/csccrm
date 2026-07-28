@@ -28,33 +28,6 @@
 
 }
 
-body{
-
-    background:var(--light);
-
-}
-
-.main-content{
-
-    margin-left:260px;
-
-    padding:24px;
-
-    width:calc(100% - 260px);
-
-}
-
-
-/* =========================
-   REPORT PAGE
-========================= */
-
-.reports-page{
-
-    width:100%;
-    zoom:90%;
-
-}
 
 
 /* =========================
@@ -457,11 +430,59 @@ canvas{
     display:grid;
 
     grid-template-columns:
-    repeat(5,1fr);
+    repeat(auto-fit, minmax(160px, 1fr));
 
     gap:12px;
 
     margin:18px 0 24px;
+
+}
+
+.date-range-group{
+
+    display:flex;
+
+    flex-wrap:nowrap;
+
+    align-items:center;
+
+    gap:8px;
+
+    grid-column: span 2;
+
+    min-width:280px;
+
+}
+
+.date-range-group .filter-input{
+
+    flex:1 1 0;
+
+    min-width:0;
+
+}
+
+.date-range-label{
+
+    flex:0 0 auto;
+
+    font-size:12px;
+
+    color:var(--text);
+
+    white-space:nowrap;
+
+}
+
+.report-table-footer{
+
+    padding:12px 16px;
+
+    font-size:13px;
+
+    color:var(--text);
+
+    text-align:right;
 
 }
 

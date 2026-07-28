@@ -152,7 +152,7 @@ class Batch(models.Model):
         start_date__lte=self.end_date,
         end_date__gte=self.start_date
     )
-
+        overlapping_batches=Batch.objects.none()
         if overlapping_batches.exists():
             raise ValidationError({
             'trainer':

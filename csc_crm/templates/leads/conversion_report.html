@@ -140,7 +140,7 @@
           <p>Number of leads in each stage</p>
         </div>
       </div>
-      <div class="cr-by-count">By Count ▾</div>
+      {% comment %} <div class="cr-by-count">By Count ▾</div> {% endcomment %}
     </div>
     <canvas id="leadStageChart" height="180"></canvas>
   </div>
@@ -204,5 +204,5 @@
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+<script src="{% static 'js/conversion_report.js' %}"></script>
 {% endblock %}
